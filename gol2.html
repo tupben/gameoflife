@@ -1,84 +1,98 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <head>
-  <title>Game of Life</title>
-  <style>
+  <title>The Game of Life</title>
+
+<style>
 
 body{
   margin-left: 60px;
+  text-align: center;
+  color: steelblue;
+  font-size: 24px;
 }
 
 .row {
   display: flex;
   flex-direction: row;
+  text-align: center;
 }
 
 .pixel {
-  height: 40px;
-  width: 40px;
-  margin: 2px;
+  margin: 1px;
   cursor: pointer;
-  border: 1px solid black;
-  position: relative;
-  float: left;
+  border: 1px solid RGB(230,230,230);
 }
 
 .pixel:hover {
-  border: solid 1px RGB(0,255,255);
-  background-color: blue;
+  border: solid 1px steelblue;
 }
 
-
-#goButton {
-  bottom: 0%;
-  float:bottom;
-  width: 400px;
+input {
   height: 80px;
-  cursor: pointer;
+  width: 400px;
   font-size: 34px;
+  cursor: pointer;
   background-color: transparent;
-  border: steelblue 2px solid;
-  margin: 10px 20px;
+  border: RGB(230,230,230) 2px solid;
 }
 
-#goButton:hover{
-  background-color: steelblue;
-  color: white;
+input:hover {
+  border:  2px solid steelblue;
+}
+
+#sidebar {
+  right: 0%;
+  top:0%;
+  margin: 100px 240px;
+  position:absolute;
+  display: flex;
+  flex-direction:column;
+}
+
+.sideButton {
+  margin: 20px 0;
 }
 
   </style>
 </head>
+
 <body>
-  <h1>Game of Life</h1>
-<div id="chart"></div>
-
-
-
+  <h1>The Game of Life</h1>
+  <div id="chart"></div>
 
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.js" type="text/javascript"></script>
 <script>
 
-var id = -1
-var data = [];
-var boardSize = 12;
-for (i=0;i<boardSize;i++) {
-  data.push(new Array(boardSize).fill(0));
-};
+var id = -1;
+var data = new Array();
+var boardSize = 18;
+var animate = null;
+var chartDim = 600;
+var pixDim = chartDim / boardSize - 4
 
-data[3][3]=1;
-data[3][4]=1;
-data[3][5]=1;
-data[0][2]=1;
-data[7][3]=1;
-data[9][9]=1;
-data[9][8]=1;
-data[8][9]=1;
-data[8][7]=1;
-data[8][6]=1;
-data[7][7]=1;
-data[7][8]=1;
-data[7][9]=1;
+clearMap();
+randMap();
+
+function clearMap(){
+  for (i=0;i<boardSize;i++) {
+      data[i]=new Array();
+    for (j=0;j<boardSize;j++) {
+      data[i][j]=0;
+    }
+  }
+  updateElem(data);
+}
+
+function randMap(){
+  for (i=0;i<boardSize;i++) {
+    for (j=0;j<boardSize;j++) {
+      data[i][j] = Math.random()<.15 ? 1 : 0
+    }
+  }
+  updateElem(data);
+}
 
 var neighbors = [ [-1,-1],
                   [-1,0],
@@ -100,28 +114,30 @@ var pixel = row
         .data(function(d) { return d; })
       .enter().append("div")
         .attr("class","pixel")
-        .style("background-color",function(d) {return "RGB(" + eval(255-d*255) + ",255,255)"})
+        .style("height", pixDim + "px")
+        .style("width", pixDim + "px")
+        .style("background-color",function(d) {return d ? "steelblue" : "white"})
         .attr("id",function(){id++; return "["+Math.floor(id/boardSize)+","+ id%boardSize+"]"})
         .on("click", function() {
           var y = eval(this.id)[0]
           var x = eval(this.id)[1]
           d3.select(this)
-            .style("background-color","RGB(" + eval(data[y][x]*255)+",255,255");
-          data[y][x]=1-data[y][x]
+            .style("background-color", data[y][x]? "white" : "steelblue");
+          data[y][x]=1-data[y][x];
         })
 
 
-function update(data){
+function updateElem(data){
   d3.selectAll(".row")
-        .data(data)
-      .selectAll(".pixel")
-        .data(function(d) {return d; })
-      .transition()
-        .duration(300)
-        .style("background-color",function(d) {return "RGB(" + eval(255*(1-d)) + ",255,255)"})
+      .data(data)
+    .selectAll(".pixel")
+      .data(function(d) {return d; })
+    .transition()
+      .duration(300)
+      .style("background-color",function(d) {return d ? "steelblue" : "white"})
 }
 
-function pals(a,b) {
+function newDatum(a,b) {
   var allNeighbors = neighbors.map(function(x) {
     a = Number(a)
     b = Number(b)
@@ -142,33 +158,72 @@ function pals(a,b) {
 }
 
 
-function nextMap(data1){
+function updateData(data1){
   var data2 = _.cloneDeep(data1)
   for (i in data1){
     for (j in data1){
-      data2[i][j]=pals(i,j)
+      data2[i][j]=newDatum(i,j);
     }
   }
-  return data2
+  return data2;
 }
 
-
-var goButton = d3.select("body").append("input")
-  .attr("id","goButton")
-  .attr("type","button")
-  .attr("value","go")
-  .style("left","0%")
-
-
-goButton
-    .on("click", function() {
-      setInterval( function() {
-        data = nextMap(data);
-        update(data)
-        }, 200)
-  })
+var randButton = d3.select("body").append("div")
+    .attr("id","sidebar")
+  .append("input")
+    .attr("id","randButton")
+    .attr("type","button")
+    .attr("class","sideButton")
+    .attr("value","random")
+    .on("click",function() {
+      randMap();
+    })
 
 
+var clearButton = d3.select("#sidebar")
+  .append("input")
+    .attr("id","clearButton")
+    .attr("type","button")
+    .attr("class","sideButton")
+    .attr("value","clear")
+    .on("click",function() {
+      clearMap();
+    })
+
+
+var runButton = d3.select("#sidebar")
+  .append("input")
+    .style("margin-top","240px")
+    .attr("id","runButton")
+    .attr("type","button")
+    .attr("class","sideButton")
+    .attr("value","run")
+    .on("click", function(){
+      stopStartFunction();
+    })
+
+
+stopStartFunction = function(){
+  animate === null ? start() : stop()
+  change();
+}
+
+function start(){
+  data = updateData(data);
+  updateElem(data);
+  animate = setTimeout(start,200);
+}
+
+change = function() {
+  var oldValue = d3.select("#runButton").attr("value");
+  var newValue = (oldValue === "run") ? "stop" : "run";
+  runButton.attr("value",newValue);
+}
+
+stop = function(){
+  clearTimeout(animate)
+  animate = null;
+}
 </script>
 </body>
 </html>
